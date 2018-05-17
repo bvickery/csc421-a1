@@ -79,47 +79,7 @@ def print_board(city_connections):
         print("City: ", city, "Connections: ", connections)
         print("\n\n")
     return
-'''
-#https://github.com/aimacode/aima-python/blob/master/search.py
-def best_first_graph_search(graph, start, end, f):
-    """Search the nodes with the lowest f scores first.
-    You specify the function f(node) that you want to minimize; for example,
-    if f is a heuristic estimate to the goal, then we have greedy best
-    first search; if f is node.depth then we have breadth-first search.
-    There is a subtlety: the line "f = memoize(f, 'f')" means that the f
-    values will be cached on the nodes as they are computed. So after doing
-    a best first search you can examine the f values of the path returned."""
-    #f = memoize(f, 'f')
-    path = [start]
-    if path[-1] == end:
-        return path
-    frontier = PriorityQueue('min', f)
-    frontier.append(path[-1], end, path)
-    explored = set()
-    while frontier:
-        print(path)
-        #print(frontier)
-        node = frontier.pop()
-        if node == end:
-            return path + [node]
-        explored.add(node)
-        for child in set(graph[path[-1]]) - set(path):
-            if child not in explored and (child, end, path) not in frontier:
-                frontier.append(child, end, path)
-                path.append(child)
-            elif child in frontier:
-                incumbent = frontier[child]
-                if f(child, end, path) < f(incumbent, end, path):
-                    del frontier[incumbent]
-                    del path[incumbent]
-                    frontier.append(child, end, path)
-                    path.append(child)
-    return None
-#https://github.com/aimacode/aima-python/blob/master/search.py
-greedy_best_first_graph_search = best_first_graph_search
-# Greedy best-first search is accomplished by specifying f(n) = h(n).
 
-'''
 
 def greedy_best_first_graph_search(graph, start, end, f):
     open = set()
