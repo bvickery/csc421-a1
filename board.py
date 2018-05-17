@@ -3,7 +3,8 @@ import random
 import sys
 from scipy.spatial import distance
 from timeit import default_timer as timer
-from utils import PriorityQueue
+from Queue import Queue
+from Queue import PriorityQueue
 
 def generate_board():
     board = np.zeros((100,100))
@@ -78,7 +79,7 @@ def print_board(city_connections):
         print("City: ", city, "Connections: ", connections)
         print("\n\n")
     return
-
+'''
 #https://github.com/aimacode/aima-python/blob/master/search.py
 def best_first_graph_search(graph, start, end, f):
     """Search the nodes with the lowest f scores first.
@@ -97,7 +98,7 @@ def best_first_graph_search(graph, start, end, f):
     explored = set()
     while frontier:
         print(path)
-        print(list(frontier))
+        #print(frontier)
         node = frontier.pop()
         if node == end:
             return path + [node]
@@ -118,29 +119,85 @@ def best_first_graph_search(graph, start, end, f):
 greedy_best_first_graph_search = best_first_graph_search
 # Greedy best-first search is accomplished by specifying f(n) = h(n).
 
-#https://github.com/aimacode/aima-python/blob/master/search.py
-def astar_search(graph, start, end, f):
-    """A* search is best-first graph search with f(n) = g(n)+h(n).
-    You need to specify the h function when you call astar_search, or
-    else in your Problem subclass."""
-    #h = memoize(h or problem.h, 'h')
-    return best_first_graph_search(graph, start, end, f)
+'''
 
-def euclidean(city1, city2, path):
+def greedy_best_first_graph_search(graph, start, end, f):
+    open = set()
+    closed = set()
+    open.add(start)
+    path = []
+    while open:
+
+        current = min(open, key=lambda x:f(x, end))
+        open.remove(current)
+        path.append(current)
+        if current == end:
+            return path
+        closed.add(current)
+        for child in set(graph[current]):
+            if child not in closed:
+                open.add(child)
+    return []
+
+def a_star_search(graph, start, goal, f):
+    frontier = PriorityQueue()
+    frontier.put(start, 0)
+    came_from = {start: None}
+
+    while not frontier.empty():
+        current = frontier.get()
+
+        if current == goal:
+            break
+
+        for next in set(graph[current]):
+            new_cost = cost_so_far[current] + f(current, next)
+            if next not in cost_so_far or new_cost < cost_so_far[next]:
+                cost_so_far[next] = new_cost
+                priority = new_cost + f(goal, next)
+                frontier.put(next, priority)
+                came_from[next] = current
+
+    return came_from
+
+
+#https://github.com/melkir/A-Star-Python/blob/master/Algorithms.py
+def a_star_search(graph, start, goal, f):
+    frontier = PriorityQueue()
+    frontier.put(start, 0)
+    came_from = {start: None}
+    cost_so_far = {start: 0}
+
+    while not frontier.empty():
+        current = frontier.get()
+
+        if current == goal:
+            break
+
+        for next in set(graph[current]):
+            new_cost = cost_so_far[current] + f(current, next)
+            if next not in cost_so_far or new_cost < cost_so_far[next]:
+                cost_so_far[next] = new_cost
+                priority = new_cost + f(goal, next)
+                frontier.put(next, priority)
+                came_from[next] = current
+
+    return came_from
+#https://github.com/melkir/A-Star-Python/blob/master/Algorithms.py
+def reconstruct_path(came_from, start, goal):
+    current = goal
+    path = [current]
+    while current != start:
+        if current  not in came_from:
+            return []
+        current = came_from[current]
+        path.append(current)
+    path.reverse()
+    return path
+
+def euclidean(city1, city2):
     return distance.euclidean(city1, city2)
 
-def distance_so_far(path):
-    distances = 0.0
-    for i in range(len(path)-1):
-        if i + 1 > len(path):
-            break
-        distances += distance.euclidean(path[i],path[i+1])
-    return distances
-
-def euclidean_astart(city1, city2, path):
-    h = distance.euclidean(city1, city2)
-    g = distance_so_far(path)
-    return g + h
 
 def informed_search():
     board, city_connections, cities = generate_board()
@@ -153,13 +210,16 @@ def informed_search():
 
     print_board(graph)
     print(start, end)
-    path = greedy_best_first_graph_search(graph, start, end, euclidean)
-    path_a = astar_search(graph, start, end, euclidean_astart)
-    bfs_result, bfs_max_nodes, bfs_temp_total_nodes = bfs(graph, start, end)
-    print("\ngreedy:", path)
-    print("\nBfs:", bfs_result)
-    print("\nA*:", path_a)
 
+    path_a = a_star_search(graph, start, end, euclidean)
+
+    bfs_result, bfs_max_nodes, bfs_temp_total_nodes = bfs(graph, start, end)
+
+    print("\nBfs:", bfs_result)
+    a_star_result = reconstruct_path(path_a, start, end)
+    print("\nA*:", a_star_result)
+    path = greedy_best_first_graph_search(graph, start, end, euclidean)
+    print("\ngreedy:", path)
 #https://gist.github.com/daveweber/99ea4da41f42ac92cdbf
 def bfs(graph, start, end):
 
