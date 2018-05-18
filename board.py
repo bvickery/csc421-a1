@@ -13,6 +13,7 @@ def generate_board():
     cities = []
     #used to get distances between all cities
     city_distances = {}
+    #generates the random positions of the cities
     while i < 26:
         x = random.randint(0,99)
         y = random.randint(0,99)
@@ -24,16 +25,18 @@ def generate_board():
 
     #actual paths between cities
     city_connections = {}
+    #creates the path between the closest 1-4 cities
     for city1 in cities:
+        #this inner loop creates the distances between city1 and every other city
         for city2 in cities:
             if city1 != city2:
                 city1_distances = city_distances.get(city1)
                 city1_distances.append((distance.euclidean(city1, city2), city2))
                 city_distances.update({city1:city1_distances})
 
+        #from city_distances we get the closest 1-4 cities to city1
         shortest = sorted(city_distances.get(city1), key=lambda tup: tup[0])[0:random.randint(1,4)]
 
-        #now need to update the city connections
         city1_connections = []
         if city1 in city_connections:
             city1_connections = city_connections.get(city1)
@@ -55,8 +58,7 @@ def generate_board():
 
         city_connections.update({city1:city1_connections})
 
-    #print(city_connections)
-    #avg_branches(city_connections)
+
     return board, city_connections, cities
 
 def avg_branches():
@@ -68,7 +70,7 @@ def avg_branches():
             avg += len(connections)
 
         avg = avg/26
-        #print(avg)
+
         total_avg += avg
     total_avg = total_avg/100
     print(total_avg)
@@ -152,58 +154,68 @@ def reconstruct_path(came_from, start, goal):
 def euclidean(city1, city2):
     return distance.euclidean(city1, city2)
 
+def manhattan(city1, city2):
+    sx, sy = city1
+    ex, ey = city2
+    return abs(ex - sx) + abs(ey - sy)
+
+def zero(city, city2):
+    return 0
 
 def informed_search():
 
-    greedy_solved = 0.0
-    greedy_path_length = 0.0
-    greedy_total_time = 0.0
-    greedy_total_max_nodes = 0.0
-    greedy_total_nodes = 0.0
+    hueristics = [euclidean, manhattan, zero]
 
-    astar_solved = 0.0
-    astar_path_length = 0.0
-    astar_total_time = 0.0
-    astar_total_max_nodes = 0.0
-    astar_total_nodes = 0.0
+    for f in hueristics:
+        greedy_solved = 0.0
+        greedy_path_length = 0.0
+        greedy_total_time = 0.0
+        greedy_total_max_nodes = 0.0
+        greedy_total_nodes = 0.0
 
-    for i in range(10):
-        board, city_connections, cities = generate_board()
-        graph = connections_without_distances(city_connections)
+        astar_solved = 0.0
+        astar_path_length = 0.0
+        astar_total_time = 0.0
+        astar_total_max_nodes = 0.0
+        astar_total_nodes = 0.0
 
-        start = cities[random.randint(0,25)]
-        end = start
-        while end == start:
-            end = cities[random.randint(0,25)]
+        for i in range(10):
+            board, city_connections, cities = generate_board()
+            graph = connections_without_distances(city_connections)
 
-        start_time = timer()
-        path_a, a_star_max_nodes, a_star_total_nodes = a_star_search(graph, start, end, euclidean)
-        end_time = timer()
+            start = cities[random.randint(0,25)]
+            end = start
+            while end == start:
+                end = cities[random.randint(0,25)]
 
-        astar_total_time += end_time - start_time
-        astar_max_nodes += a_star_max_nodes
-        astar_total_nodes += a_star_total_nodes
+            start_time = timer()
+            path_a, a_star_max_nodes, a_star_total_nodes = a_star_search(graph, start, end, f)
+            end_time = timer()
 
-        a_star_result = reconstruct_path(path_a, start, end)
+            astar_total_time += end_time - start_time
+            astar_total_max_nodes += a_star_max_nodes
+            astar_total_nodes += a_star_total_nodes
 
-        start_time = timer()
-        path, greedy_max_nodes, greedy_temp_total_nodes = greedy_best_first_graph_search(graph, start, end, euclidean)
-        end_time = timer()
+            a_star_result = reconstruct_path(path_a, start, end)
 
-        greedy_total_time += end_time - start_time
-        greedy_total_max_nodes += greedy_max_nodes
-        greedy_total_nodes += greedy_temp_total_nodes
+            start_time = timer()
+            path, greedy_max_nodes, greedy_temp_total_nodes = greedy_best_first_graph_search(graph, start, end, f)
+            end_time = timer()
 
-        if a_star_result != []:
-            astar_solved += 1
-        if path != []:
-            greedy_solved += 1
+            greedy_total_time += end_time - start_time
+            greedy_total_max_nodes += greedy_max_nodes
+            greedy_total_nodes += greedy_temp_total_nodes
 
-        astar_path_length += len(a_star_result)
-        greedy_path_length += len(path)
+            if a_star_result != []:
+                astar_solved += 1
+            if path != []:
+                greedy_solved += 1
 
-    print("A* stats:", astar_solved/10, astar_path_length/10, astar_total_time/10, astar_total_max_nodes/10, astar_total_nodes/10)
-    print("Greedy stats:", greedy_solved/10, greedy_path_length/10, greedy_total_time/10, greedy_total_max_nodes/10, greedy_total_nodes/10)
+            astar_path_length += len(a_star_result)
+            greedy_path_length += len(path)
+
+        print("A* stats:", astar_solved/10, astar_path_length/10, astar_total_time/10, astar_total_max_nodes/10, astar_total_nodes/10)
+        print("Greedy stats:", greedy_solved/10, greedy_path_length/10, greedy_total_time/10, greedy_total_max_nodes/10, greedy_total_nodes/10)
 
 #https://gist.github.com/daveweber/99ea4da41f42ac92cdbf
 def bfs(graph, start, end):
@@ -281,7 +293,7 @@ def id_dfs(graph, start, end):
         if temp_max_nodes > max_nodes:
             max_nodes = temp_max_nodes
         total_nodes += temp_total_nodes
-        #print(result, max_nodes)
+
         if result is None:
             return [], max_nodes, total_nodes
         if result != 'cutoff':
@@ -327,8 +339,6 @@ def uninformed_search():
             end = cities[random.randint(0,25)]
 
 
-        #print_board(graph)
-        #print(start, end)
 
         start_time = timer()
         bfs_result, bfs_max_nodes, bfs_temp_total_nodes = bfs(graph, start, end)
@@ -336,7 +346,7 @@ def uninformed_search():
         bfs_time = end_time - start_time
         if bfs_result != []:
             bfs_solved += 1
-        #print("\nbfs:", bfs_result, bfs_max_nodes, bfs_temp_total_nodes, bfs_time, bfs_solved)
+
 
         start_time = timer()
         dfs_result, dfs_max_nodes, dfs_temp_total_nodes = dfs(graph, start, end)
@@ -344,7 +354,7 @@ def uninformed_search():
         dfs_time = end_time - start_time
         if dfs_result != []:
             dfs_solved += 1
-        #print("\ndfs: ", dfs_result, dfs_max_nodes, dfs_temp_total_nodes, dfs_time, dfs_solved)
+
 
         start_time = timer()
         iddfs_result, iddfs_max_nodes, iddfs_total_nodes = id_dfs(graph, start, end)
@@ -352,7 +362,7 @@ def uninformed_search():
         iddfs_time = end_time - start_time
         if iddfs_result != []:
             ids_solved += 1
-        #print("\niterative deeping:", iddfs_result, iddfs_max_nodes, iddfs_total_nodes, iddfs_time, ids_solved)
+
 
         bfs_path_length += len(bfs_result)
         bfs_total_time += bfs_time
@@ -376,11 +386,6 @@ def uninformed_search():
 
 if __name__ == "__main__":
     np.set_printoptions(threshold=np.nan)
-    #avg_branches()
-
-    #board, city_connections, cities = generate_board()
-    #print_board(city_connections)
-    #city_connections_no_distance = connections_without_distances(city_connections)
-    #print_board(city_connections_no_distance)
-    #uninformed_search()
+    avg_branches()
+    uninformed_search()
     informed_search()
