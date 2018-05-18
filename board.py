@@ -82,6 +82,8 @@ def print_board(city_connections):
 
 
 def greedy_best_first_graph_search(graph, start, end, f):
+    max_nodes = 1
+    total_nodes = 1
     open = set()
     closed = set()
     open.add(start)
@@ -92,37 +94,25 @@ def greedy_best_first_graph_search(graph, start, end, f):
         open.remove(current)
         path.append(current)
         if current == end:
-            return path
+            return path, max_nodes, total_nodes
         closed.add(current)
+        total_nodes += 1
         for child in set(graph[current]):
             if child not in closed:
                 open.add(child)
-    return []
+                total_nodes += 1
 
-def a_star_search(graph, start, goal, f):
-    frontier = PriorityQueue()
-    frontier.put(start, 0)
-    came_from = {start: None}
+            if max_nodes < len(open) + len(closed):
+                max_nodes = len(open) + len(closed)
 
-    while not frontier.empty():
-        current = frontier.get()
-
-        if current == goal:
-            break
-
-        for next in set(graph[current]):
-            new_cost = cost_so_far[current] + f(current, next)
-            if next not in cost_so_far or new_cost < cost_so_far[next]:
-                cost_so_far[next] = new_cost
-                priority = new_cost + f(goal, next)
-                frontier.put(next, priority)
-                came_from[next] = current
-
-    return came_from
+    return [], max_nodes, total_nodes
 
 
 #https://github.com/melkir/A-Star-Python/blob/master/Algorithms.py
 def a_star_search(graph, start, goal, f):
+    max_nodes = 1
+    total_nodes = 1
+    lengthQ = 1
     frontier = PriorityQueue()
     frontier.put(start, 0)
     came_from = {start: None}
@@ -130,7 +120,7 @@ def a_star_search(graph, start, goal, f):
 
     while not frontier.empty():
         current = frontier.get()
-
+        lengthQ -= 1
         if current == goal:
             break
 
@@ -140,9 +130,13 @@ def a_star_search(graph, start, goal, f):
                 cost_so_far[next] = new_cost
                 priority = new_cost + f(goal, next)
                 frontier.put(next, priority)
+                lengthQ += 1
                 came_from[next] = current
+                if max_nodes < lengthQ + len(came_from):
+                    max_nodes = lengthQ + len(came_from)
+                total_nodes += 2
 
-    return came_from
+    return came_from, max_nodes, total_nodes
 #https://github.com/melkir/A-Star-Python/blob/master/Algorithms.py
 def reconstruct_path(came_from, start, goal):
     current = goal
@@ -160,26 +154,57 @@ def euclidean(city1, city2):
 
 
 def informed_search():
-    board, city_connections, cities = generate_board()
-    graph = connections_without_distances(city_connections)
 
-    start = cities[random.randint(0,25)]
-    end = start
-    while end == start:
-        end = cities[random.randint(0,25)]
+    greedy_solved = 0.0
+    greedy_path_length = 0.0
+    greedy_total_time = 0.0
+    greedy_total_max_nodes = 0.0
+    greedy_total_nodes = 0.0
 
-    print_board(graph)
-    print(start, end)
+    astar_solved = 0.0
+    astar_path_length = 0.0
+    astar_total_time = 0.0
+    astar_total_max_nodes = 0.0
+    astar_total_nodes = 0.0
 
-    path_a = a_star_search(graph, start, end, euclidean)
+    for i in range(10):
+        board, city_connections, cities = generate_board()
+        graph = connections_without_distances(city_connections)
 
-    bfs_result, bfs_max_nodes, bfs_temp_total_nodes = bfs(graph, start, end)
+        start = cities[random.randint(0,25)]
+        end = start
+        while end == start:
+            end = cities[random.randint(0,25)]
 
-    print("\nBfs:", bfs_result)
-    a_star_result = reconstruct_path(path_a, start, end)
-    print("\nA*:", a_star_result)
-    path = greedy_best_first_graph_search(graph, start, end, euclidean)
-    print("\ngreedy:", path)
+        start_time = timer()
+        path_a, a_star_max_nodes, a_star_total_nodes = a_star_search(graph, start, end, euclidean)
+        end_time = timer()
+
+        astar_total_time += end_time - start_time
+        astar_max_nodes += a_star_max_nodes
+        astar_total_nodes += a_star_total_nodes
+
+        a_star_result = reconstruct_path(path_a, start, end)
+
+        start_time = timer()
+        path, greedy_max_nodes, greedy_temp_total_nodes = greedy_best_first_graph_search(graph, start, end, euclidean)
+        end_time = timer()
+
+        greedy_total_time += end_time - start_time
+        greedy_total_max_nodes += greedy_max_nodes
+        greedy_total_nodes += greedy_temp_total_nodes
+
+        if a_star_result != []:
+            astar_solved += 1
+        if path != []:
+            greedy_solved += 1
+
+        astar_path_length += len(a_star_result)
+        greedy_path_length += len(path)
+
+    print("A* stats:", astar_solved/10, astar_path_length/10, astar_total_time/10, astar_total_max_nodes/10, astar_total_nodes/10)
+    print("Greedy stats:", greedy_solved/10, greedy_path_length/10, greedy_total_time/10, greedy_total_max_nodes/10, greedy_total_nodes/10)
+
 #https://gist.github.com/daveweber/99ea4da41f42ac92cdbf
 def bfs(graph, start, end):
 
